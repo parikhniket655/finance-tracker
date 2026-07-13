@@ -194,6 +194,7 @@ input, select, textarea {
 }
 
 input[type="date"] {
+  -webkit-appearance: none !important;
   min-width: 0 !important;
   width: 100% !important;
   max-width: 100% !important;

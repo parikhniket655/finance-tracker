@@ -179,6 +179,7 @@ input, select, textarea {
   display: block;
   width: 100%;
   max-width: 100%;
+  min-width: 0;
   padding: var(--space-sm);
   font-size: 1rem;
   font-weight: 700;
@@ -189,6 +190,14 @@ input, select, textarea {
   outline: none;
   box-shadow: 2px 2px 0px var(--border-color);
   transition: box-shadow 0.1s ease;
+  box-sizing: border-box;
+}
+
+input[type="date"] {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 input:focus, select:focus, textarea:focus {

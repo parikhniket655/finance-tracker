@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Blingy - A mobile-optimized, funky neobrutalist personal finance tracker.">
+  <title>Blingy 💸 - Mobile Finance Tracker</title>
+  <link rel="stylesheet" href="styles.css?v=7">
+  
+  <!-- Apple Mobile Web App Support -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Blingy">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="blingy_icon.jpg">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  
+  <!-- Onboarding Modal Overlay -->
+  <div id="onboarding-overlay" class="onboard-overlay">
+    <div class="onboard-card">
+      <h2 style="font-size: 1.6rem; text-align: center; border-bottom: 3px solid #1E1E1E; padding-bottom: 8px; margin-bottom: var(--space-md);">
+        🐷 Blingy Finance
+      </h2>
+      
+      <!-- Wizard Mode Toggles -->
+      <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-md); padding: 4px; background-color: var(--gray-light); border: 2px solid var(--border-color); border-radius: var(--border-radius-sm);">
+        <button id="toggle-onboard-mode" type="button" class="btn btn-sm btn-secondary active" style="flex: 1; font-weight: 800;">🆕 Onboard</button>
+        <button id="toggle-sync-mode" type="button" class="btn btn-sm btn-secondary" style="flex: 1; font-weight: 800;">📲 Sync Login</button>
+      </div>
+
+      <p id="onboarding-desc-text" style="font-weight: 600; margin-bottom: var(--space-md); text-align: center; font-size: 0.85rem; color: var(--gray-dark);">
+        Welcome! Let's log your starting financial balances to initialize your profile.
+      </p>
+
+      <form id="onboarding-form">
+        <!-- Phone Field (Universal) -->
+        <div class="form-group">
+          <label for="onboard-phone">Phone Number (Sync Key)</label>
+          <input type="tel" id="onboard-phone" placeholder="e.g. 9876543210 (numbers only)" pattern="\d*" required>
+        </div>
+
+        <!-- Pin Field (Optional for authorization) -->
+        <div class="form-group">
+          <label for="onboard-pin">Sync Password PIN (Optional)</label>
+          <input type="password" id="onboard-pin" placeholder="PIN for other devices" maxlength="6" pattern="\d*">
+        </div>
+
+        <!-- Starting Financial Fields (Hidden in Sync mode) -->
+        <div id="onboard-financials-fields">
+          <div class="grid-2col" style="margin-bottom: var(--space-md);">
+            <div class="form-group">
+              <label for="onboard-bank">Bank Balance (₹)</label>
+              <input type="number" id="onboard-bank" placeholder="e.g. 25000" value="0" required>
+            </div>
+            <div class="form-group">
+              <label for="onboard-cash">Cash Balance (₹)</label>
+              <input type="number" id="onboard-cash" placeholder="e.g. 5000" value="0" required>
+            </div>
+          </div>
+
+          <div class="grid-2col" style="margin-bottom: var(--space-md);">
+            <div class="form-group">
+              <label for="onboard-invest">Investments (₹)</label>
+              <input type="number" id="onboard-invest" placeholder="e.g. 150000" value="0" required>
+            </div>
+            <div class="form-group">
+              <label for="onboard-sw-net">Splitwise Net (₹)</label>
+              <input type="number" id="onboard-sw-net" placeholder="e.g. -500 (negative if you owe)" value="0" required>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="onboard-submit-btn" class="btn btn-primary" style="width: 100%; font-size: 1.1rem; padding: var(--space-md); margin-top: var(--space-xs);">Let's Roll! 🚀</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- App Body Container -->
+  <div class="app-container">
+    
+    <!-- Main Header -->
+    <header>
+      <div class="brand-row">
+        <div>
+          <h1>Blingy 💸</h1>
+          <p style="font-size: 0.75rem; color: var(--gray-dark); font-weight: 800; text-transform: uppercase;">funky mobile tracker</p>
+        </div>
+        <div id="sync-status-bubble" class="sync-status offline">Offline</div>
+      </div>
+    </header>
+
+    <!-- Main View Content Area -->
+    <main style="flex: 1;">
+      
+      <!-- 1. DASHBOARD VIEW -->
+      <section id="dashboard-view" class="view-section active">
+        <!-- Net Worth Card -->
+        <div class="card card-yellow" style="text-align: center;">
+          <h3 style="font-size: 0.85rem; color: var(--gray-dark); text-transform: uppercase; margin-bottom: 4px;">Net Worth Standing</h3>
+          <h2 id="dash-net-worth" style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px;">₹0</h2>
+        </div>
+
+        <!-- Bank & Cash Balances -->
+        <div class="grid-2col" style="margin-bottom: var(--space-md);">
+          <div class="stat-box">
+            <span class="stat-label">🏦 Bank Balance</span>
+            <div id="dash-bank-bal" class="stat-val">₹0</div>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">💵 Cash Balance</span>
+            <div id="dash-cash-bal" class="stat-val">₹0</div>
+          </div>
+        </div>
+
+        <!-- Splitwise Status Card -->
+        <div class="card card-blue">
+          <h2 class="card-title">👥 Splitwise Net Balance</h2>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-xs);">
+            <div>
+              <div id="dash-splitwise-bal" style="font-size: 1.6rem; font-weight: 900; line-height: 1.2;">₹0</div>
+              <p id="dash-splitwise-summary" style="font-size: 0.8rem; color: var(--gray-dark); margin-top: 4px;">All settled up! 🤝</p>
+            </div>
+            <button id="dash-settle-shortcut" class="btn btn-sm btn-primary" style="display: none;">Settle up</button>
+          </div>
+        </div>
+
+        <!-- Investment Target progress -->
+        <div class="card card-purple">
+          <h2 class="card-title">📈 Monthly Investment Target</h2>
+          <div class="progress-container">
+            <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem;">
+              <span id="invest-ratio-text">₹0 / ₹15,000</span>
+              <span id="invest-pct">0%</span>
+            </div>
+            <div class="progress-track">
+              <div id="invest-progress-bar" class="progress-bar"></div>
+            </div>
+            <p id="invest-progress-comment" style="font-size: 0.8rem; color: var(--gray-dark); font-style: italic;">😴 No investments logged this month.</p>
+          </div>
+        </div>
+
+        <!-- Category Spends Widget -->
+        <div class="card card-green">
+          <h2 class="card-title">🍕 Expenses by Category</h2>
+          <div class="pie-chart-box">
+            <svg id="dash-pie-chart" class="donut-chart-svg">
+              <circle cx="100" cy="100" r="70" class="chart-ring-bg"></circle>
+            </svg>
+            <div id="chart-legend" class="chart-legend"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. LOG TRANSACTION VIEW -->
+      <section id="log-view" class="view-section">
+        <div class="card card-yellow">
+          <h2 class="card-title" style="margin-bottom: var(--space-md);">📝 Record Activity</h2>
+          
+          <!-- Unified form options -->
+          <div class="options-selector" id="activity-type-selector">
+            <div class="option-btn active" data-type="expense">Expense</div>
+            <div class="option-btn" data-type="income">Income</div>
+            <div class="option-btn" data-type="investment">Invest</div>
+            <div class="option-btn" data-type="settlement">Settle</div>
+          </div>
+
+          <form id="transaction-form">
+            <!-- Amount (All Types) -->
+            <div class="form-group">
+              <label for="tx-amount">Amount (₹)</label>
+              <input type="number" id="tx-amount" placeholder="e.g. 500" required min="1">
+            </div>
+
+            <!-- Description (All Types) -->
+            <div class="form-group">
+              <label for="tx-desc">Description</label>
+              <input type="text" id="tx-desc" placeholder="e.g. Grocery shopping, SIP mutual fund" required>
+            </div>
+
+            <!-- EXPENSE FIELDS -->
+            <div id="tx-expense-fields" class="tx-fields-group">
+              <!-- Payment Method Segmented -->
+              <div class="form-group">
+                <label>Payment Mode / Account</label>
+                <div class="options-selector" id="tx-expense-paymode" style="margin-bottom: 0; margin-top: 4px;">
+                  <div class="option-btn active" data-mode="bank">🏦 Bank</div>
+                  <div class="option-btn" data-mode="cash">💵 Cash</div>
+                  <div class="option-btn" data-mode="splitwise">👥 Splitwise</div>
+                </div>
+                <p id="unpaid-split-tip" style="font-size: 0.75rem; color: var(--gray-dark); margin-top: 4px; display: none; font-weight: 700;">
+                  💡 Friend paid for this / unpaid. This will increase your Splitwise debt without deducting cash or bank.
+                </p>
+              </div>
+
+              <!-- Category -->
+              <div class="form-group">
+                <label for="tx-expense-category">Category</label>
+                <select id="tx-expense-category">
+                  <option value="Food">🍔 Food / Dining</option>
+                  <option value="Travel">🚗 Travel / Commute</option>
+                  <option value="Shopping">🛍️ Shopping / Outfits</option>
+                  <option value="Bills">🔌 Rent / Bills / Utilities</option>
+                  <option value="Others">📦 Miscellaneous / Others</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- INCOME FIELDS -->
+            <div id="tx-income-fields" class="tx-fields-group" style="display: none;">
+              <div class="form-group">
+                <label>Deposit Into</label>
+                <div class="options-selector" id="tx-income-dest" style="margin-bottom: 0; margin-top: 4px;">
+                  <div class="option-btn active" data-mode="bank">🏦 Bank</div>
+                  <div class="option-btn" data-mode="cash">💵 Cash</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- INVESTMENT FIELDS -->
+            <div id="tx-investment-fields" class="tx-fields-group" style="display: none;">
+              <div class="form-group">
+                <label>Funding Source</label>
+                <div class="options-selector" id="tx-investment-source" style="margin-bottom: 0; margin-top: 4px;">
+                  <div class="option-btn active" data-mode="bank">🏦 Bank</div>
+                  <div class="option-btn" data-mode="cash">💵 Cash</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SETTLEMENT FIELDS (Splitwise) -->
+            <div id="tx-settlement-fields" class="tx-fields-group" style="display: none;">
+              <div class="form-group">
+                <label>Settlement Type</label>
+                <div class="options-selector" id="tx-settlement-direction" style="margin-bottom: 0; margin-top: 4px;">
+                  <div class="option-btn active" data-mode="paid">You Paid Friend</div>
+                  <div class="option-btn" data-mode="received">Friend Paid You</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label id="settlement-source-label">Account Used</label>
+                <div class="options-selector" id="tx-settlement-source" style="margin-bottom: 0; margin-top: 4px;">
+                  <div class="option-btn active" data-mode="bank">🏦 Bank</div>
+                  <div class="option-btn" data-mode="cash">💵 Cash</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Date -->
+            <div class="form-group">
+              <label for="tx-date">Transaction Date</label>
+              <input type="date" id="tx-date" required>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="width: 100%; margin-top: var(--space-sm); font-size: 1.1rem; padding: var(--space-md);">Save Activity 💾</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- 3. TRANSACTION HISTORY VIEW -->
+      <section id="history-view" class="view-section">
+        <div class="card card-pink">
+          <h2 class="card-title">📋 Activity History</h2>
+          
+          <div class="history-filters">
+            <select id="filter-tx-type" style="flex: 1;">
+              <option value="all">🔍 All Types</option>
+              <option value="expense">💸 Expenses</option>
+              <option value="income">💰 Income</option>
+              <option value="investment">📈 Investments</option>
+              <option value="settlement">🤝 Settlements</option>
+            </select>
+
+            <select id="filter-tx-cat" style="flex: 1;">
+              <option value="all">📦 All Categories</option>
+              <option value="Food">🍔 Food</option>
+              <option value="Travel">🚗 Travel</option>
+              <option value="Shopping">🛍️ Shopping</option>
+              <option value="Bills">🔌 Bills</option>
+              <option value="Others">📦 Others</option>
+            </select>
+          </div>
+
+          <div id="history-transactions-list" class="transaction-list">
+            <!-- Dynamic transactions items go here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. SETTINGS VIEW -->
+      <section id="settings-view" class="view-section">
+        <!-- Settings Details Card -->
+        <div class="card card-purple">
+          <h2 class="card-title">⚙️ Control Panel</h2>
+          
+          <!-- Cloud Profile Status Info -->
+          <div style="margin-bottom: var(--space-lg); padding: var(--space-sm); border: 2px solid var(--border-color); border-radius: var(--border-radius-sm); background-color: var(--white);">
+            <h3 style="margin-bottom: 6px;">Profile Information</h3>
+            <p id="settings-profile-phone" style="font-size: 0.9rem; font-weight: 700; color: var(--gray-dark);">Phone: Not Logged In</p>
+          </div>
+
+          <!-- Settings options list -->
+          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <!-- Cloud Sync Settings -->
+            <button id="btn-cloud-sync-manual" class="btn btn-secondary" style="width: 100%;">
+              🔄 Sync to Cloud Database
+            </button>
+
+            <!-- Export backup -->
+            <button id="btn-export-backup" class="btn" style="width: 100%;">
+              📥 Export Backup (JSON)
+            </button>
+
+            <!-- Import backup -->
+            <label class="btn" style="width: 100%; margin-bottom: 0;">
+              📤 Import Backup
+              <input type="file" id="import-file-selector" style="display: none;" accept=".json">
+            </label>
+
+            <!-- Clear All Data (Reset device) -->
+            <button id="btn-clear-local" class="btn btn-danger" style="width: 100%;">
+              🚨 Clear All Local Data
+            </button>
+
+            <!-- Logout / Sync Out -->
+            <button id="btn-sync-logout" class="btn btn-danger" style="width: 100%; background-color: #E63946; color: var(--white); box-shadow: 4px 4px 0px #1E1E1E;">
+              🚪 Log Out / Disconnect Profile
+            </button>
+          </div>
+        </div>
+
+        <!-- App Meta Card -->
+        <div class="card" style="text-align: center; margin-bottom: var(--space-xl);">
+          <p style="font-size: 0.8rem; color: var(--gray-dark);">
+            Blingy Finance • Version 1.0.0
+          </p>
+          <p style="font-size: 0.75rem; color: var(--gray-dark); margin-top: 4px;">
+            Made with 💜 & neobrutalism. Local storage active.
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Sticky Mobile Navigation -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" data-target="dashboard-view">
+        <span class="nav-tab-icon">📊</span>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-tab" data-target="log-view">
+        <span class="nav-tab-icon">📝</span>
+        <span>Log Activity</span>
+      </button>
+      <button class="nav-tab" data-target="history-view">
+        <span class="nav-tab-icon">📋</span>
+        <span>History</span>
+      </button>
+      <button class="nav-tab" data-target="settings-view">
+        <span class="nav-tab-icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script src="app.js?v=7"></script>
+</body>
+</html>

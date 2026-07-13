@@ -1,0 +1,17 @@
+{
+  "short_name": "Blingy",
+  "name": "Blingy Finance",
+  "icons": [
+    {
+      "src": "blingy_icon.jpg",
+      "type": "image/jpeg",
+      "sizes": "1024x1024",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FFDE4D",
+  "theme_color": "#FFDE4D",
+  "display": "standalone",
+  "orientation": "portrait"
+}

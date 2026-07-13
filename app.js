@@ -16,7 +16,7 @@ let syncPending = false;
 
 // 2. STATE PERSISTENCE & API SYNC
 function loadState() {
-  const savedState = localStorage.getItem('blingy_state');
+  const savedState = localStorage.getItem('blingy_fresh_state');
   if (savedState) {
     try {
       state = JSON.parse(savedState);
@@ -40,7 +40,7 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem('blingy_state', JSON.stringify(state));
+  localStorage.setItem('blingy_fresh_state', JSON.stringify(state));
   syncStateToCloud();
 }
 
@@ -56,7 +56,7 @@ function resetToDefault() {
     investmentTarget: 15000,
     transactions: []
   };
-  localStorage.setItem('blingy_state', JSON.stringify(state));
+  localStorage.setItem('blingy_fresh_state', JSON.stringify(state));
   updateSyncBubble("offline");
 }
 

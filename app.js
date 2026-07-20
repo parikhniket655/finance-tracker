@@ -143,19 +143,21 @@ function getFinancialCalculations() {
         categorySpends['Others'] += amt;
       }
 
-      if (tx.payMode === 'bank') {
-        currentBank -= amt;
-      } else if (tx.payMode === 'cash') {
+      const payMode = tx.payMode || 'bank';
+      if (payMode === 'cash') {
         currentCash -= amt;
-      } else if (tx.payMode === 'splitwise') {
+      } else if (payMode === 'splitwise') {
         netSplitwiseBal -= amt; // Incurred expense unpaid (splitwise debt)
+      } else {
+        currentBank -= amt;
       }
     } 
     else if (tx.type === 'income') {
-      if (tx.incomeDest === 'bank') {
-        currentBank += amt;
-      } else if (tx.incomeDest === 'cash') {
+      const dest = tx.incomeDest || 'bank';
+      if (dest === 'cash') {
         currentCash += amt;
+      } else {
+        currentBank += amt;
       }
     } 
     else if (tx.type === 'investment') {
@@ -164,26 +166,30 @@ function getFinancialCalculations() {
         monthlyInvested += amt;
       }
 
-      if (tx.investSource === 'bank') {
-        currentBank -= amt;
-      } else if (tx.investSource === 'cash') {
+      const src = tx.investSource || 'bank';
+      if (src === 'cash') {
         currentCash -= amt;
+      } else {
+        currentBank -= amt;
       }
     } 
     else if (tx.type === 'settlement') {
-      if (tx.settlementDirection === 'paid') {
+      const src = tx.settlementSource || 'bank';
+      const dir = tx.settlementDirection || 'paid';
+
+      if (dir === 'paid') {
         netSplitwiseBal += amt; // You paid friend: reduces debt / increases credit
-        if (tx.settlementSource === 'bank') {
-          currentBank -= amt;
-        } else if (tx.settlementSource === 'cash') {
+        if (src === 'cash') {
           currentCash -= amt;
+        } else {
+          currentBank -= amt;
         }
-      } else if (tx.settlementDirection === 'received') {
+      } else if (dir === 'received') {
         netSplitwiseBal -= amt; // Friend paid you: reduces credit / increases debt
-        if (tx.settlementSource === 'bank') {
-          currentBank += amt;
-        } else if (tx.settlementSource === 'cash') {
+        if (src === 'cash') {
           currentCash += amt;
+        } else {
+          currentBank += amt; // Add to bank balance!
         }
       }
     }
@@ -425,29 +431,30 @@ function renderHistoryView() {
       txClass = 'expense';
       sign = '-';
       const payLabels = { bank: '🏦 Bank', cash: '💵 Cash', splitwise: '👥 Splitwise Unpaid' };
-      detailsStr = `Paid via ${payLabels[tx.payMode]}`;
+      detailsStr = `Paid via ${payLabels[tx.payMode || 'bank'] || '🏦 Bank'}`;
     } 
     else if (tx.type === 'income') {
       txClass = 'income';
       sign = '+';
       const destLabels = { bank: '🏦 Bank', cash: '💵 Cash' };
-      detailsStr = `Deposited to ${destLabels[tx.incomeDest]}`;
+      detailsStr = `Deposited to ${destLabels[tx.incomeDest || 'bank'] || '🏦 Bank'}`;
     } 
     else if (tx.type === 'investment') {
       txClass = 'investment';
       sign = '-';
       const srcLabels = { bank: '🏦 Bank', cash: '💵 Cash' };
-      detailsStr = `Funded by ${srcLabels[tx.investSource]}`;
+      detailsStr = `Funded by ${srcLabels[tx.investSource || 'bank'] || '🏦 Bank'}`;
     } 
     else if (tx.type === 'settlement') {
       txClass = 'settlement';
       const srcLabels = { bank: '🏦 Bank', cash: '💵 Cash' };
+      const srcText = srcLabels[tx.settlementSource || 'bank'] || '🏦 Bank';
       if (tx.settlementDirection === 'paid') {
         sign = '-';
-        detailsStr = `You paid friend using ${srcLabels[tx.settlementSource]}`;
+        detailsStr = `You paid friend using ${srcText}`;
       } else {
         sign = '+';
-        detailsStr = `Friend settled you using ${srcLabels[tx.settlementSource]}`;
+        detailsStr = `Friend settled you using ${srcText}`;
       }
     }
 
@@ -762,19 +769,24 @@ document.addEventListener('DOMContentLoaded', () => {
         date: date
       };
 
+      const getActiveOption = (containerSelector, fallback) => {
+        const activeBtn = document.querySelector(`${containerSelector} .option-btn.active`);
+        return activeBtn ? activeBtn.getAttribute('data-mode') : fallback;
+      };
+
       if (activeActivityType === 'expense') {
-        tx.payMode = selectedPaymode;
+        tx.payMode = getActiveOption('#tx-expense-paymode', 'bank');
         tx.category = document.getElementById('tx-expense-category').value;
       } 
       else if (activeActivityType === 'income') {
-        tx.incomeDest = selectedIncomeDest;
+        tx.incomeDest = getActiveOption('#tx-income-dest', 'bank');
       } 
       else if (activeActivityType === 'investment') {
-        tx.investSource = selectedInvestSource;
+        tx.investSource = getActiveOption('#tx-investment-source', 'bank');
       } 
       else if (activeActivityType === 'settlement') {
-        tx.settlementDirection = selectedSettleDirection;
-        tx.settlementSource = selectedSettleSource;
+        tx.settlementDirection = getActiveOption('#tx-settlement-direction', 'paid');
+        tx.settlementSource = getActiveOption('#tx-settlement-source', 'bank');
       }
 
       state.transactions.push(tx);

@@ -109,7 +109,12 @@ function updateSyncBubble(status) {
 }
 
 // 3. FINANCIAL CALCULATIONS ENGINE
-function getFinancialCalculations() {
+function getFinancialCalculations(selectedPeriod) {
+  if (!selectedPeriod) {
+    const selector = document.getElementById('dash-month-select');
+    selectedPeriod = selector ? selector.value : 'current';
+  }
+
   let currentBank = Number(state.bankBalance || 0);
   let currentCash = Number(state.cashBalance || 0);
   let totalInvested = Number(state.startingInvestments || 0);
@@ -126,70 +131,92 @@ function getFinancialCalculations() {
     Others: 0
   };
 
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const today = new Date();
+  const currentYearMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  
+  let targetYearMonth = selectedPeriod;
+  if (selectedPeriod === 'current') {
+    targetYearMonth = currentYearMonth;
+  }
+
+  const investTargetMonth = targetYearMonth === 'all' ? currentYearMonth : targetYearMonth;
 
   state.transactions.forEach(tx => {
     const amt = Number(tx.amount || 0);
-    const txDate = new Date(tx.date);
-    const isThisMonth = txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+    const txYearMonth = tx.date.substring(0, 7);
+
+    // Running balances are calculated up to the end of the selected month
+    const isPastOrCurrent = targetYearMonth === 'all' || txYearMonth <= targetYearMonth;
+    // Monthly statistics are calculated for the exact selected month
+    const isCurrentPeriod = targetYearMonth === 'all' || txYearMonth === targetYearMonth;
+    // Monthly investment targets are calculated for the target month
+    const isInvestMonth = txYearMonth === investTargetMonth;
 
     if (tx.type === 'expense') {
-      totalExpenses += amt;
-      const cat = tx.category || 'Others';
-      if (categorySpends[cat] !== undefined) {
-        categorySpends[cat] += amt;
-      } else {
-        categorySpends['Others'] += amt;
+      if (isCurrentPeriod) {
+        totalExpenses += amt;
+        const cat = tx.category || 'Others';
+        if (categorySpends[cat] !== undefined) {
+          categorySpends[cat] += amt;
+        } else {
+          categorySpends['Others'] += amt;
+        }
       }
 
-      const payMode = tx.payMode || 'bank';
-      if (payMode === 'cash') {
-        currentCash -= amt;
-      } else if (payMode === 'splitwise') {
-        netSplitwiseBal -= amt; // Incurred expense unpaid (splitwise debt)
-      } else {
-        currentBank -= amt;
+      if (isPastOrCurrent) {
+        const payMode = tx.payMode || 'bank';
+        if (payMode === 'cash') {
+          currentCash -= amt;
+        } else if (payMode === 'splitwise') {
+          netSplitwiseBal -= amt;
+        } else {
+          currentBank -= amt;
+        }
       }
     } 
     else if (tx.type === 'income') {
-      const dest = tx.incomeDest || 'bank';
-      if (dest === 'cash') {
-        currentCash += amt;
-      } else {
-        currentBank += amt;
+      if (isPastOrCurrent) {
+        const dest = tx.incomeDest || 'bank';
+        if (dest === 'cash') {
+          currentCash += amt;
+        } else {
+          currentBank += amt;
+        }
       }
     } 
     else if (tx.type === 'investment') {
-      totalInvested += amt;
-      if (isThisMonth) {
+      if (isInvestMonth) {
         monthlyInvested += amt;
       }
-
-      const src = tx.investSource || 'bank';
-      if (src === 'cash') {
-        currentCash -= amt;
-      } else {
-        currentBank -= amt;
-      }
-    } 
-    else if (tx.type === 'settlement') {
-      const src = tx.settlementSource || 'bank';
-      const dir = tx.settlementDirection || 'paid';
-
-      if (dir === 'paid') {
-        netSplitwiseBal += amt; // You paid friend: reduces debt / increases credit
+      if (isPastOrCurrent) {
+        totalInvested += amt;
+        const src = tx.investSource || 'bank';
         if (src === 'cash') {
           currentCash -= amt;
         } else {
           currentBank -= amt;
         }
-      } else if (dir === 'received') {
-        netSplitwiseBal -= amt; // Friend paid you: reduces credit / increases debt
-        if (src === 'cash') {
-          currentCash += amt;
-        } else {
-          currentBank += amt; // Add to bank balance!
+      }
+    } 
+    else if (tx.type === 'settlement') {
+      if (isPastOrCurrent) {
+        const src = tx.settlementSource || 'bank';
+        const dir = tx.settlementDirection || 'paid';
+
+        if (dir === 'paid') {
+          netSplitwiseBal += amt;
+          if (src === 'cash') {
+            currentCash -= amt;
+          } else {
+            currentBank -= amt;
+          }
+        } else if (dir === 'received') {
+          netSplitwiseBal -= amt;
+          if (src === 'cash') {
+            currentCash += amt;
+          } else {
+            currentBank += amt;
+          }
         }
       }
     }

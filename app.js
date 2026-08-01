@@ -256,7 +256,69 @@ function switchView(targetViewId) {
   }
 }
 
+function populateMonthSelector() {
+  const selector = document.getElementById('dash-month-select');
+  if (!selector) return;
+
+  const prevValue = selector.value || 'current';
+
+  // Find all unique months in transactions
+  const months = new Set();
+  
+  // Add current month by default
+  const today = new Date();
+  const currentYearMonth = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+  months.add(currentYearMonth);
+
+  state.transactions.forEach(tx => {
+    if (tx.date && tx.date.length >= 7) {
+      months.add(tx.date.substring(0, 7));
+    }
+  });
+
+  // Convert Set to sorted Array descending
+  const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+
+  // Build options
+  selector.innerHTML = '';
+
+  // Add default "Current Month" and "All Time" at the top
+  const optCurrent = document.createElement('option');
+  optCurrent.value = 'current';
+  optCurrent.textContent = '📅 Current Month';
+  selector.appendChild(optCurrent);
+
+  const optAll = document.createElement('option');
+  optAll.value = 'all';
+  optAll.textContent = '🌍 All Time';
+  selector.appendChild(optAll);
+
+  // Add specific month options
+  sortedMonths.forEach(ym => {
+    if (ym === currentYearMonth) return;
+
+    const parts = ym.split('-');
+    const year = parseInt(parts[0], 10);
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const dateObj = new Date(year, monthIndex, 2);
+    const formattedLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const opt = document.createElement('option');
+    opt.value = ym;
+    opt.textContent = `📅 ${formattedLabel}`;
+    selector.appendChild(opt);
+  });
+
+  // Restore previous value
+  if (Array.from(selector.options).some(o => o.value === prevValue)) {
+    selector.value = prevValue;
+  } else {
+    selector.value = 'current';
+  }
+}
+
 function updateDashboardView() {
+  populateMonthSelector();
   const calcs = getFinancialCalculations();
 
   // Net Worth Card
@@ -927,6 +989,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterCatSelect = document.getElementById('filter-tx-cat');
   if (filterTypeSelect) filterTypeSelect.addEventListener('change', renderHistoryView);
   if (filterCatSelect) filterCatSelect.addEventListener('change', renderHistoryView);
+
+  // Month selector dashboard listener
+  const dashMonthSelect = document.getElementById('dash-month-select');
+  if (dashMonthSelect) dashMonthSelect.addEventListener('change', updateDashboardView);
 
   // Initialize UI View
   updateDashboardView();

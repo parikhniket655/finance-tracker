@@ -96,6 +96,14 @@
       
       <!-- 1. DASHBOARD VIEW -->
       <section id="dashboard-view" class="view-section active">
+        <!-- Month Selector Dropdown -->
+        <div class="form-group" style="margin-bottom: var(--space-md);">
+          <label for="dash-month-select">📅 View Dashboard For</label>
+          <select id="dash-month-select">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
         <!-- Net Worth Card -->
         <div class="card card-yellow" style="text-align: center;">
           <h3 style="font-size: 0.85rem; color: var(--gray-dark); text-transform: uppercase; margin-bottom: 4px;">Net Worth Standing</h3>
@@ -368,6 +376,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
 
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>
